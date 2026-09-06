@@ -4,6 +4,7 @@ from app.agent.state import IncidentState
 from app.agent.nodes import (
     collect_metrics,
     collect_logs,
+    collect_traces,
     analyze_metrics,
 )
 
@@ -18,6 +19,11 @@ builder.add_node(
 builder.add_node(
     "collect_logs",
     collect_logs,
+)
+
+builder.add_node(
+    "collect_traces",
+    collect_traces,
 )
 
 builder.add_node(
@@ -37,6 +43,11 @@ builder.add_edge(
 
 builder.add_edge(
     "collect_logs",
+    "collect_traces",
+)
+
+builder.add_edge(
+    "collect_traces",
     "analyze_metrics",
 )
 

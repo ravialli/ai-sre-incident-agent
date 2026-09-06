@@ -6,9 +6,12 @@ class IncidentState(TypedDict, total=False):
     cluster: str
     service: str
     severity: str
+    window_start: int
+    window_end: int
 
     metrics: dict
     logs: dict
+    traces: dict
 
     probable_cause: str
     confidence: float

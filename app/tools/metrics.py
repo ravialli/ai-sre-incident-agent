@@ -4,10 +4,7 @@ from app.tools.mimir import MimirClient
 
 class MetricsTool:
     def __init__(self):
-        self.client = MimirClient(
-    settings.mimir_base_url,
-    settings.request_timeout,
-)
+        self.client = MimirClient(settings.mimir_base_url, settings.request_timeout)
         
     def _extract_value(self, response: dict) -> float:
         result = response["data"]["result"]
@@ -17,74 +14,74 @@ class MetricsTool:
 
         return float(result[0]["value"][1])
 
-    async def get_service_metrics(self, service: str) -> dict:
+    async def get_service_metrics(self, service: str, time: int | None = None) -> dict:
         job = f"opentelemetry-demo/{service}"
 
         queries = {
             "request_rate": f'''
-sum(
-  rate(
-    http_server_request_duration_count{{
-      job="{job}"
-    }}[5m]
-  )
-)
-''',
-
+              sum(
+                rate(
+                  http_server_request_duration_count{{
+                    job="{job}"
+                  }}[5m]
+                )
+              )
+              ''',
+              
             "error_rate": f'''
-(
-  100 *
-  sum(
-    rate(
-      http_server_request_duration_count{{
-        job="{job}",
-        http_response_status_code=~"5.."
-      }}[5m]
-    )
-  )
-  /
-  sum(
-    rate(
-      http_server_request_duration_count{{
-        job="{job}"
-      }}[5m]
-    )
-  )
-)
-or vector(0)
-''',
-
+              (
+                100 *
+                sum(
+                  rate(
+                    http_server_request_duration_count{{
+                      job="{job}",
+                      http_response_status_code=~"5.."
+                    }}[5m]
+                  )
+                )
+                /
+                sum(
+                  rate(
+                    http_server_request_duration_count{{
+                      job="{job}"
+                    }}[5m]
+                  )
+                )
+              )
+              or vector(0)
+              ''',
+              
             "p95_latency": f'''
-histogram_quantile(
-  0.95,
-  sum by (le) (
-    rate(
-      http_server_request_duration_bucket{{
-        job="{job}"
-      }}[5m]
-    )
-  )
-)
-''',
+              histogram_quantile(
+                0.95,
+                sum by (le) (
+                  rate(
+                    http_server_request_duration_bucket{{
+                      job="{job}"
+                    }}[5m]
+                  )
+                )
+              )
+              ''',
 
             "p99_latency": f'''
-histogram_quantile(
-  0.99,
-  sum by (le) (
-    rate(
-      http_server_request_duration_bucket{{
-        job="{job}"
-      }}[5m]
-    )
-  )
-)
-'''
-        }
+              histogram_quantile(
+                0.99,
+                sum by (le) (
+                  rate(
+                    http_server_request_duration_bucket{{
+                      job="{job}"
+                    }}[5m]
+                  )
+                )
+              )
+              '''
+          }
 
         results = {}
 
         for name, query in queries.items():
-            results[name] = await self.client.query(query)
+            results[name] = await self.client.query(query, time=time)
 
         return {
             "service": service,
