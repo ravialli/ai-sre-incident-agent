@@ -5,7 +5,7 @@ from app.agent.nodes import (
     collect_metrics,
     collect_logs,
     collect_traces,
-    analyze_metrics,
+    analyze_incident,
 )
 
 
@@ -27,8 +27,8 @@ builder.add_node(
 )
 
 builder.add_node(
-    "analyze_metrics",
-    analyze_metrics,
+    "analyze_incident",
+    analyze_incident,
 )
 
 builder.add_edge(
@@ -48,11 +48,11 @@ builder.add_edge(
 
 builder.add_edge(
     "collect_traces",
-    "analyze_metrics",
+    "analyze_incident",
 )
 
 builder.add_edge(
-    "analyze_metrics",
+    "analyze_incident",
     END,
 )
 
