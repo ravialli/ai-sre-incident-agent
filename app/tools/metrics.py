@@ -3,8 +3,8 @@ from app.tools.mimir import MimirClient
 
 
 class MetricsTool:
-    def __init__(self, client = None):
-        self.client = client or MimirClient(
+    def __init__(self):
+        self.client = MimirClient(
     settings.mimir_base_url,
     settings.request_timeout,
 )
