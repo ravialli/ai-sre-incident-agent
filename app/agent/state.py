@@ -8,6 +8,7 @@ class IncidentState(TypedDict, total=False):
     severity: str
 
     metrics: dict
+    logs: dict
 
     probable_cause: str
     confidence: float
