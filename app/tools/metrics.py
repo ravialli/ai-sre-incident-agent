@@ -4,7 +4,10 @@ from app.tools.mimir import MimirClient
 
 class MetricsTool:
     def __init__(self, client = None):
-        self.client = client or MimirClient(settings.mimir_base_url)
+        self.client = client or MimirClient(
+    settings.mimir_base_url,
+    settings.request_timeout,
+)
         
     def _extract_value(self, response: dict) -> float:
         result = response["data"]["result"]
