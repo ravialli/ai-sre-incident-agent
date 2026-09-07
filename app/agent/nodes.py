@@ -2,6 +2,14 @@ from app.tools.metrics import MetricsTool
 from app.tools.logs import LogsTool
 from app.tools.traces import TraceTool
 import asyncio
+from langchain.messages import SystemMessage
+
+from app.agent.llm import get_incident_analysis_model
+from app.agent.prompts import (
+    INCIDENT_SYSTEM_PROMPT,
+    build_incident_message,
+)
+
 
 async def collect_metrics(state: dict) -> dict:
     metrics_tool = MetricsTool()
@@ -50,44 +58,25 @@ async def collect_traces(state: dict) -> dict:
     return {"traces": trace_result}
 
 async def analyze_incident(state: dict) -> dict:
-    metrics = state.get("metrics") or {}
-    logs = state.get("logs") or {}
-    traces = state.get("traces") or {}
-    
-    error_rate = metrics.get("error_rate", 0.0)
-    p95_latency = metrics.get("p95_latency", 0.0)
-    p99_latency = metrics.get("p99_latency", 0.0)
+    model = get_incident_analysis_model()
 
-    trace_summaries = traces.get("traces") or []
+    messages = [
+        SystemMessage(content=INCIDENT_SYSTEM_PROMPT),
+        build_incident_message(state),
+    ]
 
-    error_spans = []
+    try:
+        analysis = await model.ainvoke(messages)
+        return analysis.model_dump()
 
-    for trace in trace_summaries:
-        details = trace.get("details") or {}
-
-        for span in details.get("spans") or []:
-            if span.get("status") == "STATUS_CODE_ERROR":
-                error_spans.append(span)
-                
-    evidence = []
-    probable_cause = ""
-    confidence = 0.3 if error_spans else 0.1
-    
-    if error_spans:
-        probable_cause = ("Trace-level failures were observed, but the root cause has not yet been determined.")
-    else:
-        probable_cause = ("No clear root cause was identified from the collected trace evidence.")
-    
-    if error_spans:
-        evidence.append(
-            f"Found {len(error_spans)} trace spans with error status."
-        )
-        
-    recommended_actions = ["Review the error spans and correlated logs for the incident window."]
-
-    return {
-        "probable_cause": probable_cause,
-        "confidence": confidence,
-        "evidence": evidence,
-        "recommended_actions": recommended_actions
-    }
+    except Exception:
+        return {
+            "probable_cause": "Automated root cause analysis could not be completed.",
+            "confidence": 0.0,
+            "evidence": [
+                "Metrics, logs, and traces were collected, but LLM analysis was unavailable."
+            ],
+            "recommended_actions": [
+                "Review the collected incident evidence manually."
+            ],
+        }
