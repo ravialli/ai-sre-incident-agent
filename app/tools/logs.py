@@ -11,9 +11,31 @@ class LogsTool:
 
         query = (f'{{service_name={json.dumps(service)}}}')
 
-        return await self.client.query_range(
-            logql=query,
-            start=start,
-            end=end,
-            limit=limit,
-        )
+        payload =  await self.client.query_range(logql=query, start=start, end=end, limit=limit)
+        
+        streams = payload.get("data", {}).get("result") or []
+        
+        entries = []
+        
+        for stream in streams:
+            labels = stream.get("stream") or {}
+            values = stream.get("values") or []
+            
+            for value in values:
+                if len(value) < 2:
+                    continue
+
+                entries.append(
+                    {
+                        "timestamp": value[0],
+                        "message": value[1],
+                        "labels": labels,
+                    }
+                )
+        return {
+            "service": service,
+            "query": query,
+            "start": start,
+            "end": end,
+            "entries": entries,
+        }

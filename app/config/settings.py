@@ -5,6 +5,8 @@ class Settings(BaseSettings):
     mimir_base_url: str
     loki_base_url: str
     tempo_base_url: str
+    llm_provider: str
+    llm_model: str
 
     loki_tenant_id: str = "prod-app-a"
 
