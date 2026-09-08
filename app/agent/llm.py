@@ -5,7 +5,12 @@ from app.models.incident import IncidentAnalysis
 
 
 def get_chat_model():
-    return init_chat_model(model=settings.llm_model, model_provider=settings.llm_provider, temperature=0)
+    kwargs = {}
+
+    if (settings.llm_provider == "anthropic" and settings.anthropic_workspace_id):
+        kwargs["default_headers"] = {"anthropic-workspace-id": settings.anthropic_workspace_id}
+
+    return init_chat_model(model=settings.llm_model, model_provider=settings.llm_provider, **kwargs)
 
 
 def get_incident_analysis_model():

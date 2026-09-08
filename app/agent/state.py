@@ -1,4 +1,5 @@
-from typing import TypedDict
+from typing import TypedDict, Annotated
+import operator
 
 
 class IncidentState(TypedDict, total=False):
@@ -17,3 +18,4 @@ class IncidentState(TypedDict, total=False):
     confidence: float
     evidence: list[str]
     recommended_actions: list[str]
+    telemetry_errors: Annotated[list[str], operator.add]
