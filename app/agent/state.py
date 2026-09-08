@@ -16,6 +16,6 @@ class IncidentState(TypedDict, total=False):
 
     probable_cause: str
     confidence: float
-    evidence: list[str]
+    evidence: list[dict[str, str]]
     recommended_actions: list[str]
     telemetry_errors: Annotated[list[str], operator.add]
