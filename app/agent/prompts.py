@@ -24,6 +24,7 @@ Rules:
 - Do not present speculative causal relationships as established facts.
 - When recommending investigation of a possible cause that is not directly observed, explicitly label it as a hypothesis to verify.
 - Prefer recommendations that test or disambiguate competing hypotheses.
+- When recommending broader log retrieval, recommend increasing the retrieval limit or paginating through the incident window. Do not assume an unlimited log query is available.
 """
 
 from langchain.messages import HumanMessage

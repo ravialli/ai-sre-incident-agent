@@ -77,9 +77,7 @@ async def analyze_incident(state: dict) -> dict:
         return {
             "probable_cause": "Automated root cause analysis could not be completed.",
             "confidence": 0.0,
-            "evidence": [
-                "Available incident telemetry was collected, but automated LLM analysis was unavailable."
-            ],
+            "evidence": [],
             "recommended_actions": [
                 "Review the collected incident evidence manually."
             ],

@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from typing import Literal
 
 
 class IncidentInput(BaseModel):
@@ -16,6 +17,10 @@ class ServiceMetrics(BaseModel):
     p95_latency_ms: float | None
     p99_latency_ms: float | None
 
+class EvidenceItem(BaseModel):
+    source: Literal["metrics", "logs", "traces"]
+    observation: str
+
 
 class IncidentAnalysis(BaseModel):
     probable_cause: str = Field(
@@ -28,8 +33,8 @@ class IncidentAnalysis(BaseModel):
         description="Confidence that the probable cause is supported by the available evidence."
     )
 
-    evidence: list[str] = Field(
-        description="Specific observations from metrics, logs, or traces that support the analysis."
+    evidence: list[EvidenceItem] = Field(
+        description="Concrete observations from the supplied incident telemetry. Each item must identify its telemetry source and must not contain unsupported facts."
     )
 
     recommended_actions: list[str] = Field(

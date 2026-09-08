@@ -37,7 +37,7 @@ class LogsTool:
             "query": query,
             "start": start,
             "end": end,
-            "limit": 100,
-            "entries_returned": 100,
+            "limit": limit,
+            "entries_returned": len(entries),
             "entries": entries,
         }
