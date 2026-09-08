@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     tempo_base_url: str
     llm_provider: str
     llm_model: str
+    anthropic_workspace_id: str | None = None
 
     loki_tenant_id: str = "prod-app-a"
 

@@ -39,24 +39,33 @@ def build_incident_message(state: dict) -> HumanMessage:
         indent=2,
         default=str,
     )
+    
+    telemetry_errors = json.dumps(
+        state.get("telemetry_errors") or [],
+        indent=2,
+        default=str,
+    )
 
     content = f"""
-        Incident:
-        - Alert: {state.get("alert_name")}
-        - Cluster: {state.get("cluster")}
-        - Service: {state.get("service")}
-        - Severity: {state.get("severity")}
-        - Window start: {state.get("window_start")}
-        - Window end: {state.get("window_end")}
+    Incident:
+    - Alert: {state.get("alert_name")}
+    - Cluster: {state.get("cluster")}
+    - Service: {state.get("service")}
+    - Severity: {state.get("severity")}
+    - Window start: {state.get("window_start")}
+    - Window end: {state.get("window_end")}
 
-        Metrics: 
-        {metrics}
+    Metrics: 
+    {metrics}
 
-        Logs: 
-        {logs}
+    Logs: 
+    {logs}
 
-        Traces: 
-        {traces}
-        """
+    Traces: 
+    {traces}
+    
+    Telemetry collection errors:
+    {telemetry_errors}
+    """
 
     return HumanMessage(content=content)

@@ -10,10 +10,11 @@ class IncidentInput(BaseModel):
 
 class ServiceMetrics(BaseModel):
     service: str
-    request_rate: float
-    error_rate: float
-    p95_latency: float
-    p99_latency: float
+    protocol: str
+    request_rate: float | None
+    error_rate: float | None
+    p95_latency_ms: float | None
+    p99_latency_ms: float | None
 
 
 class IncidentAnalysis(BaseModel):
