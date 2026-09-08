@@ -26,13 +26,46 @@ class TraceTool:
         normalized_traces = []
 
         for trace in traces:
+            trace_start_ns = trace.get("startTimeUnixNano")
+            duration_ms = trace.get("durationMs")
+
+            trace_start_unix = None
+            trace_end_unix = None
+            window_relation = "unknown"
+            
+            if trace_start_ns is not None and duration_ms is not None:
+                trace_start_unix = int(trace_start_ns) / 1_000_000_000
+                trace_end_unix = trace_start_unix + (float(duration_ms) / 1000)
+                
+                if start is not None and end is not None:
+                    if trace_end_unix < start:
+                        window_relation = "before_window"
+
+                    elif trace_start_unix > end:
+                        window_relation = "after_window"
+
+                    elif trace_start_unix <= start and trace_end_unix >= end:
+                        window_relation = "spans_entire_window"
+
+                    elif trace_start_unix < start:
+                        window_relation = "overlaps_window_start"
+
+                    elif trace_end_unix > end:
+                        window_relation = "overlaps_window_end"
+
+                    else:
+                        window_relation = "within_window"
+                        
             normalized_traces.append(
                 {
                     "trace_id": trace.get("traceID"),
                     "root_service": trace.get("rootServiceName"),
                     "root_trace_name": trace.get("rootTraceName"),
-                    "start_time_unix_nano": trace.get("startTimeUnixNano"),
-                    "duration_ms": trace.get("durationMs"),
+                    "start_time_unix_nano": trace_start_ns,
+                    "duration_ms": duration_ms,
+                    "trace_start_unix": trace_start_unix,
+                    "trace_end_unix": trace_end_unix,
+                    "window_relation": window_relation,
                 }
             )
         return {
@@ -41,6 +74,7 @@ class TraceTool:
             "start": start,
             "end": end,
             "traces": normalized_traces,
+            
         }
             
     async def get_trace_details(self, trace_id: str) -> dict:

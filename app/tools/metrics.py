@@ -2,6 +2,7 @@ from app.config.settings import settings
 from app.tools.mimir import MimirClient
 import json
 
+LATENCY_BUCKET_CEILING_SECONDS = 10.0
 
 class MetricsTool:
     def __init__(self):
@@ -75,6 +76,10 @@ class MetricsTool:
         
         p95 = self._extract_value(results["p95_latency"])
         p99 = self._extract_value(results["p99_latency"])
+        
+        p95_is_bucket_ceiling = (p95 is not None and p95 >= LATENCY_BUCKET_CEILING_SECONDS)
+
+        p99_is_bucket_ceiling = (p99 is not None and p99 >= LATENCY_BUCKET_CEILING_SECONDS)
 
         return {
             "service": service,
@@ -83,4 +88,6 @@ class MetricsTool:
             "error_rate": self._extract_value(results["error_rate"]),
             "p95_latency_ms": p95 * 1000 if p95 is not None else None,
             "p99_latency_ms": p99 * 1000 if p99 is not None else None,
+            "p95_is_bucket_ceiling": p95_is_bucket_ceiling,
+            "p99_is_bucket_ceiling": p99_is_bucket_ceiling,   
         }
