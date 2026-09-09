@@ -8,6 +8,10 @@ class Settings(BaseSettings):
     llm_provider: str
     llm_model: str
     anthropic_workspace_id: str | None = None
+    embedding_provider: str
+    embedding_model: str
+    rag_collection_name: str
+    rag_persist_directory: str
 
     loki_tenant_id: str = "prod-app-a"
 
@@ -16,6 +20,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore",
+        env_file_encoding="utf-8",
     )
 
 

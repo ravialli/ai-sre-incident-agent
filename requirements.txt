@@ -6,3 +6,7 @@ pydantic-settings
 langgraph
 langchain
 langchain-openai
+langchain-text-splitters
+langchain-chroma 
+chromadb
+langchain-ollama
