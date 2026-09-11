@@ -32,26 +32,3 @@ def split_runbooks(documents: list[Document]) -> list[Document]:
             chunks.append(chunk)
 
     return chunks
-
-documents = load_runbooks(Path("runbooks"))
-chunks = split_runbooks(documents)
-
-documents = load_runbooks(Path("runbooks"))
-chunks = split_runbooks(documents)
-
-sample_chunks = chunks[:3]
-
-embedding_model = get_embedding_model()
-vectors = embedding_model.embed_documents(
-    [chunk.page_content for chunk in sample_chunks]
-)
-
-print("Chunks embedded:", len(vectors))
-
-for i, vector in enumerate(vectors):
-    print(
-        f"Chunk {i}:",
-        sample_chunks[i].metadata.get("runbook_id"),
-        sample_chunks[i].metadata.get("section"),
-        len(vector),
-    )
