@@ -1,17 +1,17 @@
+from app.agent.state import IncidentState
 from app.tools.metrics import MetricsTool
 from app.tools.logs import LogsTool
 from app.tools.traces import TraceTool
 import asyncio
 from langchain.messages import SystemMessage
 import logging
+from app.rag.query_builder import build_runbook_query
+from app.rag.retriever import retrieve_runbooks
 
 logger = logging.getLogger(__name__)
 
 from app.agent.llm import get_incident_analysis_model
-from app.agent.prompts import (
-    INCIDENT_SYSTEM_PROMPT,
-    build_incident_message,
-)
+from app.agent.prompts import (INCIDENT_SYSTEM_PROMPT, build_incident_message)
 
 
 async def collect_metrics(state: dict) -> dict:
@@ -81,4 +81,38 @@ async def analyze_incident(state: dict) -> dict:
             "recommended_actions": [
                 "Review the collected incident evidence manually."
             ],
+        }
+
+async def retrieve_runbook_context(state: IncidentState) -> dict:
+    query = build_runbook_query(state)
+    
+    documents = await asyncio.to_thread(retrieve_runbooks, query, k=6)
+    
+    retrieved_runbooks = []
+    try:
+        for document in documents:
+            retrieved_runbooks.append({
+                    "runbook_id": document.metadata.get("runbook_id"),
+                    "filename": document.metadata.get("filename"),
+                    "section": document.metadata.get("section"),
+                    "source": document.metadata.get("source"),
+                    "authoritative": document.metadata.get(
+                        "authoritative",
+                        False,
+                    ),
+                    "content": document.page_content,
+                })
+        return {
+            "runbook_query": query,
+            "retrieved_runbooks": retrieved_runbooks,
+        }
+    except Exception:
+        logger.exception(
+            "Runbook retrieval failed for service=%s",
+            state.get("service"),
+        )
+
+        return {
+            "runbook_query": query,
+            "retrieved_runbooks": [],
         }

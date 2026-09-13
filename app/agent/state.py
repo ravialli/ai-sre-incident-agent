@@ -13,6 +13,8 @@ class IncidentState(TypedDict, total=False):
     metrics: dict
     logs: dict
     traces: dict
+    runbook_query: str
+    retrieved_runbooks: list[dict]
 
     probable_cause: str
     confidence: float
