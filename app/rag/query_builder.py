@@ -10,6 +10,22 @@ DOMINANT_SPAN_RATIO = 0.80
 
 
 def build_runbook_query(state: IncidentState) -> str:
+    
+    telemetry_errors = state.get("telemetry_errors", [])
+
+    all_telemetry_unavailable = all(
+        error in telemetry_errors
+        for error in (
+            "metrics_unavailable",
+            "logs_unavailable",
+            "traces_unavailable",
+        )
+    )
+    if all_telemetry_unavailable:
+        return ("Metrics, logs, and traces are all unavailable for the incident window.\n"
+    "Telemetry collection or export may be incomplete or unavailable.\n"
+    "Need guidance for investigating telemetry loss and observability pipeline failures.\n")
+
     parts: list[str] = [
         f"Alert: {state['alert_name']}",
         f"Service: {state['service']}",

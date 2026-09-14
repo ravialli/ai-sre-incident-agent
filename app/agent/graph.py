@@ -5,6 +5,7 @@ from app.agent.nodes import (
     collect_metrics,
     collect_logs,
     collect_traces,
+    retrieve_runbook_context,
     analyze_incident,
 )
 
@@ -24,6 +25,11 @@ builder.add_node(
 builder.add_node(
     "collect_traces",
     collect_traces,
+)
+
+builder.add_node(
+    "retrieve_runbook_context",
+    retrieve_runbook_context,
 )
 
 builder.add_node(
@@ -48,6 +54,11 @@ builder.add_edge(
 
 builder.add_edge(
     "collect_traces",
+    "retrieve_runbook_context",
+)
+
+builder.add_edge(
+    "retrieve_runbook_context",
     "analyze_incident",
 )
 
