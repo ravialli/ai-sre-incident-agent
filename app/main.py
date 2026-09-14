@@ -33,4 +33,14 @@ async def investigate_incident(incident: IncidentInput):
     
     result = await incident_graph.ainvoke(initial_state)
     
+    print("Runbook query:")
+    print(result.get("runbook_query"))
+
+    print("\nRetrieved runbooks:")
+    for item in result.get("retrieved_runbooks", []):
+        print(
+            item.get("runbook_id"),
+            item.get("section"),
+        )
+    
     return result
