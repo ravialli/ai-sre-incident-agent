@@ -83,7 +83,7 @@ def _add_metrics(parts: list[str], metrics: dict[str, Any] | None) -> None:
         if p95_is_bucket_ceiling or p99_is_bucket_ceiling:
             parts.append("Service latency reached the upper histogram bucket ceiling, so the true latency may be higher than the reported bucket value.")
         else:
-            parts.append("Service latency is elevated.")
+            parts.append(f"Observed service latency percentiles include p95 approximately {p95_latency_ms:.0f} ms and p99 approximately {p99_latency_ms:.0f} ms.")
 
     error_rate = metrics.get("error_rate")
 
