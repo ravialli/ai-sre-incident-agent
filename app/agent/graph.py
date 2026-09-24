@@ -5,6 +5,8 @@ from app.agent.nodes import (
     collect_metrics,
     collect_logs,
     collect_traces,
+    identify_downstream_service,
+    collect_downstream_telemetry,
     retrieve_runbook_context,
     analyze_incident,
 )
@@ -25,6 +27,16 @@ builder.add_node(
 builder.add_node(
     "collect_traces",
     collect_traces,
+)
+
+builder.add_node(
+    "identify_downstream_service",
+    identify_downstream_service,
+)
+
+builder.add_node(
+    "collect_downstream_telemetry",
+    collect_downstream_telemetry,
 )
 
 builder.add_node(
@@ -54,6 +66,16 @@ builder.add_edge(
 
 builder.add_edge(
     "collect_traces",
+    "identify_downstream_service",
+)
+
+builder.add_edge(
+    "identify_downstream_service",
+    "collect_downstream_telemetry",
+)
+
+builder.add_edge(
+    "collect_downstream_telemetry",
     "retrieve_runbook_context",
 )
 

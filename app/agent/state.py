@@ -15,6 +15,11 @@ class IncidentState(TypedDict, total=False):
     traces: dict
     runbook_query: str
     retrieved_runbooks: list[dict]
+    
+    downstream_service: str | None
+    downstream_selection: dict
+    downstream_telemetry: dict
+    downstream_telemetry_errors: list[str]
 
     probable_cause: str
     confidence: float

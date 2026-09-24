@@ -208,6 +208,230 @@ async def collect_traces(state: dict) -> dict:
             "telemetry_errors": ["traces_unavailable"],
         }
 
+def _find_dominant_downstream_service(
+    traces: dict,
+    alerted_service: str,
+) -> dict | None:
+    """
+    Find a downstream service whose span dominates an alerted-service span.
+
+    Only considers service-boundary transitions where a span from another
+    service is a child of a span owned by the alerted service.
+    """
+
+    trace_entries = traces.get("traces") or []
+    candidates = []
+
+    # The first traces are our diagnostically selected traces.
+    for trace in trace_entries[:3]:
+        details = trace.get("details") or {}
+        spans = details.get("spans") or []
+
+        spans_by_id = {
+            span["span_id"]: span
+            for span in spans
+            if span.get("span_id")
+        }
+
+        for span in spans:
+            service = span.get("service")
+            parent_span_id = span.get("parent_span_id")
+            duration_ms = span.get("duration_ms")
+
+            if (
+                not service
+                or service == alerted_service
+                or not parent_span_id
+                or duration_ms is None
+            ):
+                continue
+
+            parent = spans_by_id.get(parent_span_id)
+
+            if not parent:
+                continue
+
+            # We only want a real service-boundary transition:
+            #
+            # checkout span
+            #     ↓
+            # shipping span
+            if parent.get("service") != alerted_service:
+                continue
+
+            parent_duration_ms = parent.get("duration_ms")
+
+            duration_ratio = None
+
+            if parent_duration_ms and parent_duration_ms > 0:
+                duration_ratio = duration_ms / parent_duration_ms
+
+            candidates.append(
+                {
+                    "service": service,
+                    "trace_id": trace.get("trace_id"),
+                    "span_name": span.get("name"),
+                    "duration_ms": duration_ms,
+                    "parent_span_name": parent.get("name"),
+                    "parent_duration_ms": parent_duration_ms,
+                    "duration_ratio": duration_ratio,
+                }
+            )
+
+    if not candidates:
+        return None
+
+    # Prefer the downstream span consuming the most time.
+    candidates.sort(
+        key=lambda candidate: candidate["duration_ms"],
+        reverse=True,
+    )
+
+    return candidates[0]
+
+
+async def identify_downstream_service(state: dict) -> dict:
+    candidate = _find_dominant_downstream_service(
+        traces=state.get("traces") or {},
+        alerted_service=state["service"],
+    )
+
+    if not candidate:
+        return {
+            "downstream_service": None,
+            "downstream_selection": {},
+        }
+
+    # Avoid expanding tiny downstream calls.
+    duration_ms = candidate.get("duration_ms") or 0
+    duration_ratio = candidate.get("duration_ratio") or 0
+
+    if duration_ms < 500 or duration_ratio < 0.5:
+        return {
+            "downstream_service": None,
+            "downstream_selection": {},
+        }
+
+    return {
+        "downstream_service": candidate["service"],
+        "downstream_selection": candidate,
+    }
+    
+
+async def collect_downstream_telemetry(state: dict) -> dict:
+    service = state.get("downstream_service")
+
+    if not service:
+        return {
+            "downstream_telemetry": {},
+            "downstream_telemetry_errors": [],
+        }
+
+    metrics_tool = MetricsTool()
+    logs_tool = LogsTool()
+    trace_tool = TraceTool()
+
+    errors = []
+
+    metrics = {}
+    logs = {}
+    traces = {}
+
+    # Metrics
+    try:
+        metrics = await metrics_tool.get_service_metrics(
+            service,
+            time=state["window_end"],
+        )
+    except Exception:
+        logger.exception(
+            "Downstream metrics collection failed for service=%s",
+            service,
+        )
+        errors.append("downstream_metrics_unavailable")
+
+    # Logs
+    try:
+        logs = await logs_tool.get_service_logs(
+            service,
+            start=state["window_start"],
+            end=state["window_end"],
+        )
+    except Exception:
+        logger.exception(
+            "Downstream logs collection failed for service=%s",
+            service,
+        )
+        errors.append("downstream_logs_unavailable")
+
+    # Traces
+    try:
+        trace_result = await trace_tool.get_service_traces(
+            service,
+            start=state["window_start"],
+            end=state["window_end"],
+        )
+
+        trace_summaries = trace_result.get("traces") or []
+
+        # For downstream exploration, longest traces are most useful.
+        candidates = sorted(
+            [
+                trace
+                for trace in trace_summaries
+                if trace.get("trace_id")
+            ],
+            key=lambda trace: float(
+                trace.get("duration_ms") or 0
+            ),
+            reverse=True,
+        )[:3]
+
+        detail_tasks = [
+            trace_tool.get_trace_details(
+                trace_id=trace["trace_id"]
+            )
+            for trace in candidates
+        ]
+
+        details = await asyncio.gather(
+            *detail_tasks,
+            return_exceptions=True,
+        )
+
+        for trace, detail in zip(candidates, details):
+            if isinstance(detail, Exception):
+                trace["details_error"] = (
+                    "trace_details_unavailable"
+                )
+                continue
+
+            trace["details"] = detail
+
+        trace_result["traces"] = candidates
+        traces = trace_result
+
+    except Exception:
+        logger.exception(
+            "Downstream trace collection failed for service=%s",
+            service,
+        )
+        errors.append("downstream_traces_unavailable")
+
+    return {
+        "downstream_telemetry": {
+            "service": service,
+            "selection": state.get(
+                "downstream_selection",
+                {},
+            ),
+            "metrics": metrics,
+            "logs": logs,
+            "traces": traces,
+        },
+        "downstream_telemetry_errors": errors,
+    }
+
 async def analyze_incident(state: dict) -> dict:
     messages = [SystemMessage(content=INCIDENT_SYSTEM_PROMPT), build_incident_message(state)]
 
@@ -230,10 +454,10 @@ async def analyze_incident(state: dict) -> dict:
 async def retrieve_runbook_context(state: IncidentState) -> dict:
     query = build_runbook_query(state)
     
-    documents = await asyncio.to_thread(retrieve_runbooks, query, k=6)
-    
-    retrieved_runbooks = []
     try:
+        documents = await asyncio.to_thread(retrieve_runbooks, query, k=6)
+        retrieved_runbooks = []
+    
         for document in documents:
             retrieved_runbooks.append({
                     "runbook_id": document.metadata.get("runbook_id"),

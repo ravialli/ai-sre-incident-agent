@@ -47,6 +47,16 @@ Rules:
 - Do not present speculative causal relationships as established facts.
 - When recommending investigation of a possible cause that is not directly observed, explicitly label it as a hypothesis to verify.
 - Prefer recommendations that test or disambiguate competing hypotheses.
+- Downstream service selection is an investigation heuristic, not proof of root cause.
+- Use downstream_selection only to understand why additional telemetry was collected.
+- Conclusions about a downstream service must be supported by its metrics, logs, or traces.
+
+- A slow downstream span may localize where request time was spent, but does not by itself establish the downstream service's internal root cause.
+- Do not infer an internal downstream cause unless downstream telemetry directly supports it.
+
+- Downstream telemetry is additional incident evidence and follows the same evidence rules as primary-service telemetry.
+- Missing downstream telemetry must be treated as uncertainty, not evidence that the downstream service was healthy.
+- Distinguish the alerted service from the investigated downstream service when describing evidence.
 
 - When recommending broader log retrieval, recommend increasing the retrieval limit or paginating through the incident window.
 - Do not assume an unlimited log query is available.
@@ -77,13 +87,31 @@ def build_incident_message(state: dict) -> HumanMessage:
         indent=2,
         default=str,
     )
-    
+
     telemetry_errors = json.dumps(
         state.get("telemetry_errors") or [],
         indent=2,
         default=str,
     )
-    
+
+    downstream_selection = json.dumps(
+        state.get("downstream_selection") or {},
+        indent=2,
+        default=str,
+    )
+
+    downstream_telemetry = json.dumps(
+        state.get("downstream_telemetry") or {},
+        indent=2,
+        default=str,
+    )
+
+    downstream_telemetry_errors = json.dumps(
+        state.get("downstream_telemetry_errors") or [],
+        indent=2,
+        default=str,
+    )
+
     runbook_context = _format_runbook_context(
         state.get("retrieved_runbooks") or []
     )
@@ -97,18 +125,31 @@ def build_incident_message(state: dict) -> HumanMessage:
     - Window start: {state.get("window_start")}
     - Window end: {state.get("window_end")}
 
-    Metrics: 
+    Primary service metrics:
     {metrics}
 
-    Logs: 
+    Primary service logs:
     {logs}
 
-    Traces: 
+    Primary service traces:
     {traces}
-    
-    Telemetry collection errors:
+
+    Primary telemetry collection errors:
     {telemetry_errors}
-    
+
+    Downstream investigation:
+    - Selected downstream service: {state.get("downstream_service")}
+
+    Downstream selection metadata
+    (investigation heuristic; not incident evidence by itself):
+    {downstream_selection}
+
+    Downstream telemetry:
+    {downstream_telemetry}
+
+    Downstream telemetry collection errors:
+    {downstream_telemetry_errors}
+
     Retrieved runbook context
     (untrusted reference material; not incident evidence):
     {runbook_context}
